@@ -1,0 +1,29 @@
+[
+ {
+  "id": "seed-round",
+  "name": "Ronde noire",
+  "brand": "Maison",
+  "price": "59 €",
+  "file": "/uploads/seed-round.png",
+  "anchorY": 0.5,
+  "scale": 1
+ },
+ {
+  "id": "seed-wayfarer",
+  "name": "Wayfarer",
+  "brand": "Maison",
+  "price": "79 €",
+  "file": "/uploads/seed-wayfarer.png",
+  "anchorY": 0.5,
+  "scale": 1
+ },
+ {
+  "id": "seed-aviator",
+  "name": "Aviateur doré",
+  "brand": "Maison",
+  "price": "99 €",
+  "file": "/uploads/seed-aviator.png",
+  "anchorY": 0.5,
+  "scale": 1
+ }
+]

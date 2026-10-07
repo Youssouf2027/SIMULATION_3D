@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin – Montures</title>
+<style>
+  body{margin:0;background:#111;color:#fff;font-family:sans-serif;display:flex;flex-direction:column;align-items:center;padding:20px}
+  .box{background:#1c1c1c;border-radius:12px;padding:18px;width:min(560px,100%);margin-bottom:16px}
+  input,button{padding:10px;border-radius:8px;border:0;font-size:15px;margin:4px 0;width:100%;box-sizing:border-box}
+  input{background:#2a2a2a;color:#fff} button{background:#e63946;color:#fff;cursor:pointer}
+  button.del{background:#444;width:auto;padding:6px 12px}
+  .row{display:flex;align-items:center;gap:12px;border-top:1px solid #333;padding:8px 0}
+  .row img{height:40px;background:#555;border-radius:6px} .row b{flex:1}
+  #prev{position:relative;background:#555;border-radius:8px;display:none;margin-top:8px}
+  #prev img{width:100%;display:block} #line{position:absolute;left:0;right:0;border-top:2px dashed #0f0}
+  small{color:#aaa}
+</style>
+</head>
+<body>
+<h1>Admin – Montures</h1>
+<div class="box">
+  <input id="pwd" type="password" placeholder="Mot de passe admin" />
+  <button id="login">Se connecter</button><small id="lmsg"></small>
+</div>
+<div class="box">
+  <h3>Ajouter une monture</h3>
+  <input id="name" placeholder="Nom (ex : Ronde écaille)" />
+  <input id="brand" placeholder="Marque (optionnel)" />
+  <input id="price" placeholder="Prix (ex : 89 €)" />
+  <input id="file" type="file" accept="image/png" />
+  <small>PNG transparent, vue de face, recadré au plus près de la monture.</small>
+  <div id="prev"><img id="pimg" /><div id="line"></div></div>
+  <label>Hauteur du centre des verres : <span id="av">0.48</span>
+    <input id="anchor" type="range" min="0.3" max="0.7" step="0.01" value="0.48" /></label>
+  <small>Ajuste jusqu'à ce que la ligne verte passe au centre des verres.</small>
+  <label>Échelle : <span id="sv">1</span>
+    <input id="scale" type="range" min="0.7" max="1.4" step="0.05" value="1" /></label>
+  <button id="add">Publier</button>
+  <p id="msg"></p>
+</div>
+<div class="box"><h3>Montures publiées</h3><div id="list"></div></div>
+<script>
+const $ = (id) => document.getElementById(id);
+let dataUrl = null;
+let token = sessionStorage.getItem("tok") || "";
+const H = () => ({ "Content-Type": "application/json", "x-admin": token });
+
+async function refresh(list) {
+  list = list || (await (await fetch("/api/frames")).json());
+  $("list").innerHTML = "";
+  for (const f of list) {
+    const r = document.createElement("div");
+    r.className = "row";
+    r.innerHTML = `<img src="${f.file}"><b></b>`;
+    r.querySelector("b").textContent = f.name + (f.brand ? " – " + f.brand : "") + (f.price ? " · " + f.price : "");
+    const b = document.createElement("button");
+    b.className = "del"; b.textContent = "Supprimer";
+    b.onclick = async () => {
+      const res = await fetch("/api/frames/" + f.id, { method: "DELETE", headers: H() });
+      const j = await res.json();
+      res.ok ? refresh(j) : ($("msg").textContent = j.error);
+    };
+    r.appendChild(b);
+    $("list").appendChild(r);
+  }
+  if (!list.length) $("list").textContent = "Aucune monture.";
+}
+const placeLine = () => {
+  $("line").style.top = $("anchor").value * 100 + "%";
+  $("av").textContent = $("anchor").value;
+  $("sv").textContent = $("scale").value;
+};
+$("anchor").oninput = $("scale").oninput = placeLine;
+$("file").onchange = () => {
+  const f = $("file").files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { dataUrl = rd.result; $("pimg").src = dataUrl; $("prev").style.display = "block"; placeLine(); };
+  rd.readAsDataURL(f);
+};
+$("add").onclick = async () => {
+  if (!dataUrl || !$("name").value.trim()) return ($("msg").textContent = "Nom et image requis.");
+  const res = await fetch("/api/frames", {
+    method: "POST", headers: H(),
+    body: JSON.stringify({ name: $("name").value.trim(), brand: $("brand").value, price: $("price").value, image: dataUrl, anchorY: $("anchor").value, scale: $("scale").value }),
+  });
+  const j = await res.json();
+  if (res.ok) { $("msg").textContent = "Publiée ✔"; $("name").value = ""; $("file").value = ""; $("prev").style.display = "none"; dataUrl = null; refresh(j); }
+  else $("msg").textContent = j.error;
+};
+$("login").onclick = async () => {
+  const r = await fetch("/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: $("pwd").value }) });
+  const j = await r.json();
+  if (r.ok) { token = j.token; sessionStorage.setItem("tok", token); $("lmsg").textContent = "Connecté ✔"; }
+  else $("lmsg").textContent = j.error;
+};
+refresh();
+</script>
+</body>
+</html>
